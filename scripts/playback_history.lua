@@ -90,7 +90,7 @@ local function is_loopback_host(h)   -- 本机回环（本地中继/代理）
 end
 
 -- ⭐飞牛影视(FnTV)的本地中继地址：http://127.0.0.1:22345/api/v1/playvideo/<itemGuid>?session=<token>
---   三个坑：① host 是回环，不是 NAS 真地址（真地址形如 10.5.73.99:52007）；
+--   三个坑：① host 是回环，不是 NAS 真地址（真地址形如 <NAS-IP>:<端口>）；
 --   ② session 每播一次就换 ⇒ 同一集会被当成新条目重复入史；
 --   ③ 只有飞牛影视进程活着、且该播放会话没过期时才播得动（关掉飞牛影视必失败）。
 --   itemGuid 才是稳定标识，用它做身份归一。
@@ -132,7 +132,7 @@ local function looks_like_token(s)
 end
 
 -- 飞牛影视的 force-media-title 会带它自己的占位词（集标题为空填 noTitle、
--- 剧名为空填 noTVTitle）：如「仙逆 - S1E161: noTitle」应显示为「仙逆 - S1E161」。
+-- 剧名为空填 noTVTitle）：如「剧名 - S1E5: noTitle」应显示为「剧名 - S1E5」。
 local function strip_fnt_placeholder(t)
     if not t or t == '' then return t end
     t = t:gsub('%s*[:：]%s*noTitle%s*$', '')
