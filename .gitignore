@@ -1,0 +1,18 @@
+# WorkBuddy 工作区数据（私有，不入库）
+# 注意：目录名以 ! 开头，在 gitignore 里必须转义，否则会被当成「取消忽略」的否定模式
+.workbuddy/
+\!tmp/
+
+# 运行期产生
+*.log
+mpv.log
+
+# 用户自己的播放历史数据
+playback_history.json
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+*.swp
