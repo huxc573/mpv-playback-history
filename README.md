@@ -14,6 +14,8 @@ A playback-history & resume plugin for mpv, with a uosc menu.
   （mpv 在 `shutdown` / `end-file` 时属性已经读不到，动态读会得到 `nil`，插件因此改用了快照）。
 - **按来源分层**：本地文件按**父文件夹**分组，网络流按 **URL host** 分组；host 可用 `source_names` 起别名。
 - **菜单里能干完所有事**：`..` 回父文件夹、行内上移/下移/删除、文件夹内清空、点击即播并自动关窗。
+- **点历史条目不动你的列表**：列表本来有内容时，新条目插到当前之后播，原列表一条不少、播完接着往下；
+  列表为空且是本地文件时，按同目录自动带出整季并定位到那一集（`list_expand` 可调）。
 - **设置项也能在 mpv 里改**：不必去翻配置文件，菜单里点着换档，改完自动写回 `script-opts/*.conf`。
 - **空启动续播**：mpv 空着启动时，空格 / 回车 / 鼠标左键 = 续播最近一条记录。
 - **只记真播过的**：播放不足 `min_play` 秒（只被加载、没真播的）不入历史，杜绝「幽灵条目」。
@@ -82,6 +84,7 @@ Ctrl+H  script-binding playback_history/open
 | `stream_play` | `auto` | 网络记录能否点播：`auto` 自动判断 / `always` 全可点 / `never` 全置灰 |
 | `source_names` | 空 | 网络来源别名，`host=名字`，逗号分隔（如 `192.168.1.9=家里的NAS`） |
 | `file` | 空 | 历史文件路径，留空 = `<配置目录>/playback_history.json` |
+| `list_expand` | `filter` | 点历史里的本地文件时是否带出同目录剧集：`filter` 按文件名相似度 / `same` 同目录全部 / `no` 只播这一个文件 |
 
 ## 存储格式
 
