@@ -540,7 +540,14 @@ local function resume_path(p)
         return
     end
     pending_resume = {path = e.path, pos = e.pos}
-    mp.commandv('loadfile', e.path)
+    -- ⭐绝不吞掉 mpv 自己的播放列表：默认的 loadfile 会把整个列表换成这一个文件，
+    -- 「打开一整季 / 一个文件夹后自动往下播」就此失效。列表非空时插到当前条目之后播，
+    -- 原有条目（含下一集）原样保留，这条播完自动接着原列表继续。
+    if (mp.get_property_number('playlist-count') or 0) > 0 then
+        mp.commandv('loadfile', e.path, 'insert-next-play')
+    else
+        mp.commandv('loadfile', e.path)
+    end
 end
 
 mp.register_event('file-loaded', function()
@@ -592,7 +599,7 @@ local function watch_stream(p)
         if mp.get_property_native('idle-active') or mp.get_property_number('time-pos') == nil then
             local cp = mp.get_property('path')
             if not cp or cp == '' then cp = stream_watch_path end
-            mp.commandv('stop')
+            mp.commandv('stop', 'keep-playlist')   -- ⭐stop 默认会清空整个列表，必须加 keep-playlist
             osd(stream_fail_msg(cp), 4)
         end
     end)
@@ -1063,30 +1070,36 @@ local function idle_bindings_unbind()
     mp.remove_key_binding('ph/lmb')
 end
 
-mp.observe_property('idle-active', 'bool', function(_, idle)
-    if idle then
-        idle_bindings_bind()
-        local ipc = mp.get_property('options/input-ipc-server')
-        if not ipc or ipc == '' then
-            local e, skipped = pick_idle_entry()
-            local hint
-            if not e then
-                hint = '空格 / 点击播放（当前无播放记录）'
-            elseif not directly_playable(e.path) then
-                hint = '最近的记录不可直接续播（可打开播放历史查看）'
-            else
-                hint = '空格 / 点击续播' .. (skipped and '（已跳过不可续播的）' or '')
-                    .. '：' .. ((e.title and e.title ~= '' and e.title) or basename(e.path))
-            end
-            -- 刚给过明确提示（如「地址已失效」）时不抢屏：先让人看清为什么没播成
-            mp.add_timeout(0.3, function()
-                if mp.get_time() >= hint_mute_until then mp.osd_message(hint, 3) end
-            end)
-        end
-    else
+-- ⭐idle-active 只表示「没在播」，**不等于没有播放列表**：停止播放但列表还在时它同样是 true。
+-- 那种状态下空格 / 回车 / 左键是 mpv 自带的列表操作（ENTER = 下一集），被我们接管就是破坏
+-- mpv 自己的列表功能。只有「既没在播、列表也空」才接管按键。
+local function refresh_idle_state()
+    local idle = mp.get_property_native('idle-active')
+    local has_list = (mp.get_property_number('playlist-count') or 0) > 0
+    if not (idle and not has_list) then
         idle_bindings_unbind()
+        return
     end
-end)
+    idle_bindings_bind()
+    local ipc = mp.get_property('options/input-ipc-server')
+    if ipc and ipc ~= '' then return end
+    local e, skipped = pick_idle_entry()
+    local hint
+    if not e then
+        hint = '空格 / 点击播放（当前无播放记录）'
+    elseif not directly_playable(e.path) then
+        hint = '最近的记录不可直接续播（可打开播放历史查看）'
+    else
+        hint = '空格 / 点击续播' .. (skipped and '（已跳过不可续播的）' or '')
+            .. '：' .. ((e.title and e.title ~= '' and e.title) or basename(e.path))
+    end
+    -- 刚给过明确提示（如「地址已失效」）时不抢屏：先让人看清为什么没播成
+    mp.add_timeout(0.3, function()
+        if mp.get_time() >= hint_mute_until then mp.osd_message(hint, 3) end
+    end)
+end
+mp.observe_property('idle-active', 'bool', function() refresh_idle_state() end)
+mp.observe_property('playlist-count', 'number', function() refresh_idle_state() end)
 
 -- ── 启动 ─────────────────────────────────────────────────────────────
 
