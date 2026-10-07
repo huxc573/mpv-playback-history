@@ -36,6 +36,7 @@ local o = {
     stream_play = 'auto', -- 网络记录是否可点播：auto(自动判断)/always(全可点)/never(全置灰)
     source_names = '',    -- 网络来源别名：host=名字，逗号分隔（如 192.168.1.9=FnTV,plex.local=Plex）
     file = '',            -- 历史文件路径（留空=~~/playback_history.json）
+    list_expand = 'filter', -- 点历史里的本地文件时带出同目录剧集：filter(相似名)/same(同目录全部)/no
 }
 opt.read_options(o, 'playback_history')
 
@@ -545,6 +546,10 @@ local function resume_path(p)
     -- 原有条目（含下一集）原样保留，这条播完自动接着原列表继续。
     if (mp.get_property_number('playlist-count') or 0) > 0 then
         mp.commandv('loadfile', e.path, 'insert-next-play')
+    elseif (o.list_expand or 'filter') ~= 'no' and is_local(e.path) then
+        -- ⭐列表为空时让 mpv 按文件名相似度带出同目录的其余剧集（复刻「打开文件夹」的列表续播）：
+        -- per-file option 只对这一次加载生效，不改全局配置；网络流没有目录，不受影响。
+        mp.commandv('loadfile', e.path, 'replace', '-1', 'autocreate-playlist=' .. o.list_expand)
     else
         mp.commandv('loadfile', e.path)
     end
